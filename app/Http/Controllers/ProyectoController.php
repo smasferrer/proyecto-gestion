@@ -13,16 +13,35 @@ class ProyectoController extends Controller
         return view('proyectos.crear');
     }
 
-    // Método para mostrar todos los proyectos creados u obtenidos. Punto 2
     public function index()
     {
-        $proyectos = Proyecto::obtenerTodos();
+        // Lectura de la base de datos
+        $proyectos = Proyecto::orderBy('id', 'asc')->get()->toArray();
+
+        if (request()->is('api/*')) {
+            return response()->json($proyectos);
+        }
+
         return view('proyectos.index', ['proyectos' => $proyectos]);
     }
     
     // Recibe los datos del formulario de edición para actualizar información. Punto 3
     public function actualizar(Request $request, $id)
     {
+        // Si el proyecto existe se guarda la info en la base de datos
+        $userId = auth()->id();
+
+        $proyecto = Proyecto::find($id);
+        if ($proyecto) {
+            $proyecto->update($request->only([
+                'nombre',
+                'fecha_inicio',
+                'estado',
+                'responsable',
+                'monto'
+            ]));
+        }
+
         $datos = $request->all();
         return view('proyectos.actualizado', [
             'id' => $id,
@@ -33,28 +52,49 @@ class ProyectoController extends Controller
     // Muestra la vista simulando la eliminación del proyecto. Punto 4
     public function eliminar($id)
     {
-        $proyecto = Proyecto::obtenerPorId($id);
-        return view('proyectos.eliminado', ['proyecto' => $proyecto]);
+        // Se modifica los datos estáticos por información de la base de datos
+        $proyecto = Proyecto::find($id);
+        $proyectoArray = $proyecto ? $proyecto->toArray() : null;
+        return view('proyectos.eliminado', ['proyecto' => $proyectoArray]);
     }
     // Método para mostrar proyecto por el id. Punto 5
     public function show($id)
     {
-        $proyecto = Proyecto::obtenerPorId($id);
-        return view('proyectos.show', ['proyecto' => $proyecto]);
+        $proyecto = Proyecto::find($id);
+        $proyectoArray = $proyecto ? $proyecto->toArray() : null;
+
+        if (request()->is('api/*')) {
+            if (!$proyecto) {
+                return response()->json(['message' => 'Proyecto no encontrado'], 404);
+            }
+            return response()->json($proyectoArray);
+        }
+
+        return view('proyectos.show', ['proyecto' => $proyectoArray]);
     }
 
-    // Recibe los datos del formulario de creación (simulado)
+    // Se recibe los datos de creación del formulario
     public function guardar(Request $request)
     {
-        $datos = $request->all();
-        return view('proyectos.guardado', ['datos' => $datos]);
+        $userId = auth('api')->id();
+        Proyecto::create([
+            'nombre'       => $request->nombre,
+            'fecha_inicio' => $request->fecha_inicio,
+            'estado'       => $request->estado,
+            'responsable'  => $request->responsable,
+            'monto'        => $request->monto,
+            'created_by'   => $userId,
+        ]);
+
+        return response()->json(['message' => 'Proyecto creado correctamente']);
     }
 
     // Muestra el formulario para editar un proyecto
     public function editar($id)
     {
-        $proyecto = Proyecto::obtenerPorId($id);
-        return view('proyectos.edit', ['proyecto' => $proyecto]);
+        $proyecto = Proyecto::find($id);
+        $proyectoArray = $proyecto ? $proyecto->toArray() : null;
+        return view('proyectos.edit', ['proyecto' => $proyectoArray]);
     }
 
     // Método para consumir la API externa y obtener el valor de la UF
