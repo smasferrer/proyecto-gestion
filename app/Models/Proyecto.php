@@ -23,4 +23,9 @@ class Proyecto extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    protected $casts = [
+        'fecha_inicio' => 'date',
+        'monto'        => 'decimal:2',
+    ];
 }
